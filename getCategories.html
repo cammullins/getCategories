@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <title>Get Categories</title>
+    <style>
+        body{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        button {
+            font-family: 'Roboto', sans-serif;
+            font-size: 18px;
+            padding: 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: green;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="bla()">Get Categories</button>
+    <script>
+        function bla(){
+            var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/scrape');
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        alert('User\'s name is ' + xhr.responseText);
+                    }
+                    else {
+                        alert('Request failed.  Returned status of ' + xhr.status);
+                    }
+                };
+                xhr.send();
+        }
+    </script>
+</body>
+</html>
