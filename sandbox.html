@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <button>Button</button>
+    <ul class="columns"></ul>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        // let newCategories = {
+        //         "Article ID": 360000174808,
+        //         "Article Title": "[E990] Exception in GetPatients [PERVASIVE] [ODBC Engine Interface] A Key has reached a maximum limit for user count> session count> or data in use> or has changed state to expired or disabled.",
+        //         "Article URL": "https://help.yapicentral.com/hc/en-us/articles/360000174808--E990-Exception-in-GetPatients-PERVASIVE-ODBC-Engine-Interface-A-Key-has-reached-a-maximum-limit-for-user-count-session-count-or-data-in-use-or-has-changed-state-to-expired-or-disabled-",
+        //         "Section Name": "Known Issues",
+        //         "Category Name": "Agent Resources",
+        //         "New Category": "Agent Resources",
+        //         "New Section": "Error Messages",
+        //         "New Section ID": ""
+        //     }
+        let idNums = {};
+        const authHeader = { 'Authorization': `Basic ${btoa('cameron.mullins@yapicentral.com/token:1Uki5iszgzKNtTyclDnZjYmvs7mjW6AucFwV48KQ')}` };
+        $.ajax({
+                url: 'https://help.yapicentral.com/api/v2/help_center/categories.json',
+                type: 'GET',
+                headers: authHeader
+            }).then((res, err) => {
+                res.categories.forEach(category => {
+                    let li = $(`<li id="${category.name}">${category.name}: ${category.id}<ul id="${category.name}-sections"></ul></li>`);
+                    $('.columns').append(li);
+                    idNums[category.name] = {id: category.id, sections: {}}
+                    $.ajax({
+                        url: `https://help.yapicentral.com/api/v2/help_center/categories/${category.id}/sections.json`,
+                        type: 'GET',
+                        headers: authHeader
+                    }).then(r => {
+                        r.sections.forEach(section =>{
+                            // console.log(section);
+                            let li2 = $('<li>', { "id": section.name });
+                            li2.text(section.name + ": " + section.id);
+                            // $(`#${idNums[section.catecategory.name}-sections`).append(li2)
+                            let sectObj = {
+                                id: section.id
+                            }
+                            idNums[category.name].sections[section.name] = sectObj;
+                        })
+                    })
+                });
+            })
+
+        const newCategories = (function () {
+                var json = null;
+                $.ajax({
+                    'async': false,
+                    'global': false,
+                    'url': "./categorySwitch.json",
+                    'dataType': "json",
+                    'success': function (data) {
+                        json = data;
+                    }
+                });
+                return json;
+            })();
+
+        $('button').click(function(){
+            let count = 1;
+            newCategories.forEach( newCategory => {
+                const cat = newCategory["New Category"];
+                // console.log(idNums[cat])
+                const sect = newCategory["New Section"];
+                // console.log(newCategory["Article Title"], newCategory["New Category"], newCategory["New Section"])
+                const artid = newCategory["Article ID"];
+                // console.log(idNums[cat].sections[sect].id)
+                const url = newCategory["Article URL"].substring(0, 59) + '.json';
+                // console.log(url)
+                // console.log(count)
+                count++
+                // if (!cat === newCategory["Category Name"] && !sect === newCategory["Section Name"]){
+                    $.ajax({
+                        url: `https://help.yapicentral.com/api/v2/help_center/articles/${artid}.json`,
+                        type: "PUT",
+                        headers: authHeader,
+                        data: { "article": { "section_id": idNums[cat].sections[sect].id } }
+                        // data: { "article":{"section_id": 360003058394 }}
+                    }).then((res, err) => {
+                        if (res) {
+                            console.log(res)
+                        }
+                        if (err) console.log("err", err);
+                    })
+                // }
+            })
+        })
+        $('#getCategories').click(function(){
+            $.ajax({
+                url: 'https://help.yapicentral.com/api/v2/help_center/categories.json',
+                type: 'GET',
+                headers: authHeader
+            }).then((res, err) => {
+                if (res) {
+                    console.log(res)
+                }
+                if (err) console.log("err", err);
+            })
+        })
+        
+        
+
+    </script>
+</body>
+
+</html>

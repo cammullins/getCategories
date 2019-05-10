@@ -1,49 +1,30 @@
 const express = require('express');
 const fs      = require('fs');
-const request = require('request');
-const cheerio = require('cheerio');
-const path    = require('path');
-const csv     = require('csvtojson');
-const csvFilePath = './articles.csv';
+const axios   = require('axios');
+const bp      = require('body-parser');
+const ObjectsToCsv = require('objects-to-csv');
+const util = require('util')
+const btoa = require('btoa')
+// const getArticle = require('./axiosCalls');
+
+const routes = require('./server/routes/routes');
+
 require('dotenv').config();
 
-const app     = express();
+const app = express();
 
-const PORT    = process.env.PORT || 8080;
+const PORT = process.env.PORT || 1234;
 
-var sites;
-    // .then(() => console.log(sites))
+app.use(bp.urlencoded({
+    extended: true,
+    limit: '50mb',
+    parameterLimit: 1000000
+}));
+app.use(bp.json({
+    limit: '50mb'
+}));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, './getCategories.html'))
-})
-
-app.get('/scrape', (req, res) => {
-    sites.forEach( site => {
-        console.log(site.URL)
-        request(site.URL, function(error, response, html){
-            if (!error) {
-                const $ = cheerio.load(html);
-                if($('.breadcrumbs').length){
-                    var cats = []
-                    $('.breadcrumbs>li>a').each( function(i, el){
-                        cats.push($(this).text())
-                    })
-                    console.log(cats.join(' > '))
-                    site['articleCategory'] = (cats.join(' > '))
-                }
-                console.log(sites)
-                res.json(sites)
-            }
-        })
-    })
-})
-
-csv()
-    .fromFile(csvFilePath)
-    .then( jsObj => {
-        sites = jsObj
-    })
+app.use(routes);
 
 app.listen(PORT, function () {
     console.log("App listening at http://localhost:" + PORT);

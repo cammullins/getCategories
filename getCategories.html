@@ -8,10 +8,32 @@
     <title>Get Categories</title>
     <style>
         body{
+            /* display: grid;
+            grid-template-columns: 300px 1fr; */
+        }
+        #overall{
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+        #contentbody{
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
             align-items: center;
             height: 100vh;
+        }
+        header {
+            min-height: 100px;
+        }
+        #selectBoxes {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-end;
+        }
+        select{
+            margin-right: 20px;
         }
         button {
             font-family: 'Roboto', sans-serif;
@@ -21,25 +43,373 @@
             border-radius: 5px;
             background-color: green;
             color: white;
+            margin: 5px;
+        }
+        .bg{
+            background-color: black;
+            color: white;
+        }
+        .blg{
+            background-color: blue;
+        }
+        #categories{
+            display: flex;
+            flex-wrap: wrap;
+            /* flex-direction: column; */
+            justify-content: center;
+            align-items: center;
+        }
+        #categories, #sections {
+            min-width: 220px;
+        }
+        table{
+            width: 95vw;
+        }
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        td {
+            padding: 5px 0;
+        }
+        th {
+            padding: 10px 0;
+        }
+        thead tr {
+            background-color: #404040;
+            color : white;
+        }
+        tr:nth-child(even) {
+            background-color: #dddddd;
         }
     </style>
 </head>
 <body>
-    <button onclick="bla()">Get Categories</button>
+    <!-- <div id="overall">
+        <p>Total Number of Articles: </p>
+    </div> -->
+    <div id="contentbody">
+        <header>
+            <button onclick="getCategories()">Get Categories</button>
+            <button onclick="getAllArticles()">Get All Articles</button>
+            <div id="selectBoxes">
+                <select id="categories"></select>
+                <select id="sections"></select>
+            </div>
+        </header>
+        <!-- <ul id="articleList"></ul> -->
+        <table>
+            <thead>
+                <th>Article ID</th>
+                <th>Article Title</th>
+                <th>Article Created</th>
+                <th>Article Last Updated</th>
+                <th>Article URL</th>
+                <th>Section Name</th>
+                <!-- <th>Section ID</th> -->
+                <th>Category Name</th>
+                <!-- <th>Category ID</th> -->
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script>
-        function bla(){
-            var xhr = new XMLHttpRequest();
-                xhr.open('GET', '/scrape');
-                xhr.onload = function () {
-                    if (xhr.status === 200) {
-                        alert('User\'s name is ' + xhr.responseText);
-                    }
-                    else {
-                        alert('Request failed.  Returned status of ' + xhr.status);
-                    }
-                };
-                xhr.send();
+
+        let totalArticles = 0;
+        const authHeader = { 'Authorization' : `Basic ${btoa('cameron.mullins@yapicentral.com/token:1Uki5iszgzKNtTyclDnZjYmvs7mjW6AucFwV48KQ')}` };
+        // console.log(auth);
+        $.ajax({
+            url: `https://help.yapicentral.com/api/v2/help_center/articles.json?`,
+            type: 'GET',
+            headers: authHeader,
+            success: (res) => {
+                console.log(res);
+                const p = $('<p>')
+                totalArticles = res.count;
+                getCategories();
+                // getAllArticles();
+                p.text(`Total Number of Articles: ${res.count}`)
+                $('header').append(p)
+                // console.log(res.articles)
+                // res.articles.forEach(cat => {
+                //     const li = $(`<li>`)
+                //     const a = $(`<a href="${cat.html_url}">`)
+                //     a.text(cat.name)
+                //     li.append(a)
+                //     $('#articleList').append(li)
+                // })
+            }
+        })
+
+        function scrape(){
+            console.log(totalArticles)
+            $.ajax({
+                url: '/scrape',
+                type: 'POST',
+                data: {data: totalArticles}
+            })
         }
+
+
+        function getCategories(){
+            $('#categories').empty()
+            $('#sections').empty()
+            $('#articleList').empty()
+            $.ajax({
+                // url: 'https://help.yapicentral.com/api/v2/help_center/articles.json?include=categories',
+                url: 'https://help.yapicentral.com/api/v2/help_center/categories.json',
+                type: 'GET',
+                headers: authHeader,
+                success: (res) => {
+                    $('#categories').empty()
+                    $('#categories').append('<option disabled selected value> -- select an option -- </option>')
+                    res.categories.forEach( cat => {
+                        const btn = $(`<option data-id=${cat.id} class="bg getsect">`)
+                        btn.text(cat.name)
+                        $('#categories').append(btn)
+                    })
+                }
+            })
+        }
+        $(document).on('change', '#categories', getSections);
+        $(document).on('click', '#sections', getArticles);
+
+        function getSections(){
+            $('#sections').empty()
+            $('#articleList').empty()
+            const sectId = $('option:selected', this).attr('data-id');
+            $.ajax({
+                url: `https://help.yapicentral.com/api/v2/help_center/categories/${sectId}/sections.json`,
+                type: 'GET',
+                headers: authHeader,
+                success: (res) => {
+                    $('#sections').empty()
+                    $('#sections').append('<option disabled selected value> -- select an option -- </option>')
+                    res.sections.forEach(cat => {
+                        const btn = $(`<option data-id=${cat.id} class="blg getart">`)
+                        btn.text(cat.name)
+                        $('#sections').append(btn)
+                    })
+                }
+            })
+        };
+
+        function getArticles() {
+                console.log($(this).val())
+                let allArticles = [];
+                $('#articleList').empty()
+                if($(this).val()){
+                    const artId = $('option:selected', this).attr('data-id');
+                    $.ajax({
+                        url: `https://help.yapicentral.com/api/v2/help_center/sections/${artId}/articles.json?include=sections,categories`,
+                        type: 'GET',
+                        headers: authHeader
+                    }).then( (res) => {
+                            $('#articleList').empty()
+                            console.log(res);
+                            // res.articles.forEach(cat => {
+                            //     const li = $(`<li>`)
+                            //     const a = $(`<a href="${cat.html_url}">`)
+                            //     a.text(cat.name)
+                            //     li.append(a)
+                            //     $('#articleList').append(li)
+                            // })
+                            const tbod = document.querySelector('tbody')
+                            tbod.innerHTML = "";
+                            res.articles.forEach(article => {
+                                let newArticle = {
+                                    'Article ID': article.id,
+                                    'Article Title': article.name.split(',').join('>'),
+                                    'Article Created': article.created_at.split('T')[0],
+                                    'Article Last Updated': article.updated_at.split('T')[0],
+                                    'Article URL': `<a href="${article.html_url}">Link</a>`
+                                }
+                                const sect = article.section_id;
+                                const sectnameobj = res.sections.find(obj => obj.id === sect);
+                                newArticle["Section Name"] = sectnameobj.name.split(',').join('>');
+                                const catId = sectnameobj.category_id;
+                                const catObj = res.categories.find(obj => obj.id === catId);
+                                newArticle["Category Name"] = catObj.name;
+                                
+                                const vals = Object.values(newArticle)
+                                const tr = document.createElement('tr');
+                                vals.forEach(val => {
+                                    const td = document.createElement('td');
+                                    td.innerHTML = val;
+                                    tr.appendChild(td);
+                                })
+                                tbod.appendChild(tr)
+                            })
+                            // promises.push(req)
+                        })
+                    }
+                // $.when.apply(null, req).done(() => {
+                //     console.log("allArticles", allArticles)
+                //     // makeHeader(allArticles[0]);
+                //     addContent(allArticles);
+                // })
+            }
+            
+
+            function buildJson(){
+                //get Categories
+                let catProm = [];
+                $.ajax({
+                    url: 'https://help.yapicentral.com/api/v2/help_center/categories.json',
+                    type: 'GET',
+                    headers: authHeader
+                }).then( cats => {
+
+                    cats.categories.forEach( cat => {
+                        const catReq = $.ajax({
+                            url: `https://help.yapicentral.com/api/v2/help_center/categories/${sectId}/sections.json`,
+                            type: 'GET',
+                            headers: authHeader,
+                            success: (response) => {
+                                response.articles.forEach()
+                            }
+                        })
+                        catProm.push(catReq);
+                    })
+                })
+
+                $.when.apply(null, catProm).done( () => {
+
+                })
+            }
+
+            function getAllArticles (){
+                let allArticles = [];
+                let cycles;
+                if (totalArticles % 30 === 0){
+                    cycles = (totalArticles / 30);
+                } else {
+                    cycles = (totalArticles / 30) + 1;
+                }
+                const promises = [];
+                for(var i = 1; i < cycles; i++){
+                    const req = $.ajax({
+                        url: `https://help.yapicentral.com/api/v2/help_center/articles.json?include=sections,categories&page=${i}`,
+                        type: 'GET',
+                        headers: authHeader
+                    }).then( (res) => {
+                        console.log("Page:", res.page)
+                        console.log(res);
+                        res.articles.forEach((article) => {
+                            let newArticle = {
+                                'Article ID': article.id,
+                                'Article Title': article.name.split(',').join('>'),
+                                'Article Created': article.created_at.split('T')[0],
+                                'Article Last Updated': article.updated_at.split('T')[0],
+                                'Article URL': article.html_url
+                            }
+
+                            const sect = article.section_id;
+                            const sectnameobj = res.sections.find(obj => obj.id === sect);
+                            newArticle["Section Name"] = sectnameobj.name.split(',').join('>');
+                            // newArticle["Section ID"] = sectnameobj.id;
+
+                            const catId = sectnameobj.category_id;
+                            const catObj = res.categories.find(obj => obj.id === catId);
+                            newArticle["Category Name"] = catObj.name;
+                            // newArticle["Category ID"] = catObj.id;
+
+                            allArticles.push(newArticle)
+                        })
+                    })
+                    promises.push(req);
+                }
+                $.when.apply(null, promises).done( () => {
+                    console.log("allArticles", allArticles)
+                    // makeHeader(allArticles[0]);
+                    addContent(allArticles);
+                    
+                    downloadCSV(allArticles, { filename: "lobnaArticles.csv" })
+                    // $.ajax({
+                    //     url: '/makeCSV',
+                    //     data: {data: allArticles},
+                    //     type: 'POST',
+                    //     success: () =>{
+                    //         console.log('success');
+                    //     }
+                    // })
+                })
+            }
+            function makeHeader(jsonObj){
+                const columns = Object.keys(jsonObj);
+                const head = document.querySelector('thead')
+                columns.forEach( column => {
+                    const th = document.createElement('th')
+                    th.innerHTML = column;
+                    head.appendChild(th)
+                })
+            }
+            function addContent(jsonArr){
+                jsonArr.forEach(article => {
+                    const tbod = document.querySelector('tbody') 
+                    const vals = Object.values(article)
+                    const tr = document.createElement('tr');
+                    vals.forEach( val => {
+                        const td = document.createElement('td');
+                        td.innerHTML = val;
+                        tr.appendChild(td);
+                    })
+                    tbod.appendChild(tr)
+                })
+            }
+
+
+
+            function convertArrayOfObjectsToCSV(args) {
+                    var result, ctr, keys, columnDelimiter, lineDelimiter, data;
+
+                    data = args.data || null;
+                    if (data == null || !data.length) {
+                        return null;
+                    }
+
+                    columnDelimiter = args.columnDelimiter || ',';
+                    lineDelimiter = args.lineDelimiter || '\n';
+
+                    keys = Object.keys(data[0]);
+
+                    result = '';
+                    result += keys.join(columnDelimiter);
+                    result += lineDelimiter;
+
+                    data.forEach(function (item) {
+                        ctr = 0;
+                        keys.forEach(function (key) {
+                            if (ctr > 0) result += columnDelimiter;
+
+                            result += item[key];
+                            ctr++;
+                        });
+                        result += lineDelimiter;
+                    });
+
+                    return result;
+                }
+                function downloadCSV(inputdata, args) {
+                        var data, filename, link;
+                        var csv = convertArrayOfObjectsToCSV({
+                            data: inputdata
+                        });
+                        if (csv == null) return;
+
+                        filename = args.filename || 'export.csv';
+
+                        if (!csv.match(/^data:text\/csv/i)) {
+                            csv = 'data:text/csv;charset=utf-8,' + csv;
+                        }
+                        data = encodeURI(csv);
+
+                        link = document.createElement('a');
+                        link.setAttribute('href', data);
+                        link.setAttribute('download', filename);
+                        link.click();
+                    }
     </script>
 </body>
 </html>
