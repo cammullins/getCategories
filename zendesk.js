@@ -7,4 +7,4 @@ $.ajax({
     success: (res) => { 
         console.log(res)
     } 
-})
+}) 
